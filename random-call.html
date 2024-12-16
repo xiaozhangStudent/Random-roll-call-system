@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机点名系统</title>
+    <style>
+        /* 全局样式 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        /* 修改根元素和body样式 */
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;  /* 禁止滚动 */
+        }
+        
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            position: fixed;  /* 固定body */
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 修改容器样式 */
+        .container {
+            text-align: center;
+            position: relative;
+            height: 100%;  /* 使用100%而不是100vh */
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 20px 100px;
+            overflow: hidden;
+        }
+        
+        /* 修改主要内容区域布局 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;  /* 确保flex子项可以收缩 */
+            overflow: hidden;  /* 防止内容溢出 */
+        }
+        
+        /* 调整标题样式 */
+        h1 {
+            color: #2c3e50;
+            margin: 0 0 20px;  /* 减小上边距 */
+            font-size: 2.5em;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: #2c3e50;
+            margin: 15px 0 10px;
+            flex-shrink: 0;  /* 防止标题被压缩 */
+            font-size: 1.8em;
+            font-weight: 500;
+        }
+
+        /* 结果显示区域样式 */
+        #result {
+            font-size: 32px;
+            margin: 10px auto 20px;
+            padding: 30px;
+            border: none;
+            border-radius: 12px;
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            color: #2c3e50;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            height: 100px;
+            width: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 列表容器样式 */
+        .list-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            margin-top: 10px;
+            overflow: hidden;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .list-header {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 16px;
+            border-bottom: 2px solid #4CAF50;
+            font-weight: 500;
+            color: #2c3e50;
+            background-color: #e8f5e9;
+        }
+        
+        .header-number {
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .header-name {
+            min-width: 100px;
+            padding-left: 10px;
+        }
+        
+        .header-status {
+            width: 200px;
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+        }
+        
+        .status-label {
+            padding: 4px 12px;
+            min-width: 80px;
+            font-size: 13px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            justify-content: center;
+        }
+        
+        .status-label i {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .header-note {
+            flex: 1;
+        }
+        
+        /* 学生条目样式 */
+        .student-item {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .student-item:hover {
+            background-color: #f8fdf8;
+        }
+        
+        .student-number {
+            min-width: 60px;
+            text-align: center;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .student-name {
+            min-width: 100px;
+            padding-left: 10px;
+            font-size: 16px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        /* 勾选框相关样式 */
+        .status-group {
+            width: 200px;
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .student-checkbox {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+        
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            position: relative;
+            min-width: 80px;
+            justify-content: center;
+        }
+        
+        .checkbox-custom {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            border: 2px solid #ddd;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .checkbox-wrapper-correct .checkbox-custom {
+            border-color: #4CAF50;
+            background-color: #fff;
+        }
+        
+        .student-checkbox:checked ~ .checkbox-custom.correct {
+            background-color: #4CAF50;
+        }
+        
+        .checkbox-wrapper-wrong .checkbox-custom {
+            border-color: #f44336;
+            background-color: #fff;
+        }
+        
+        .student-checkbox:checked ~ .checkbox-custom.wrong {
+            background-color: #f44336;
+        }
+        
+        .checkbox-custom:after {
+            content: '';
+            position: absolute;
+            display: none;
+            left: 8px;
+            top: 4px;
+            width: 6px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        
+        .student-checkbox:checked ~ .checkbox-custom:after {
+            display: block;
+        }
+        
+        .checkbox-wrapper:hover .checkbox-custom {
+            box-shadow: 0 0 0 3px rgba(76,175,80,0.1);
+        }
+        
+        .checkbox-wrapper-wrong:hover .checkbox-custom {
+            box-shadow: 0 0 0 3px rgba(244,67,54,0.1);
+        }
+        
+        .checkbox-label {
+            font-size: 14px;
+            padding: 4px 0;
+            cursor: pointer;
+        }
+        
+        .student-note {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background-color: #f9f9f9;
+        }
+        
+        .student-note:focus {
+            outline: none;
+            border-color: #4CAF50;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(76,175,80,0.1);
+        }
+        
+        .student-note::placeholder {
+            color: #999;
+        }
+        
+        /* 控制面板样式 */
+        .control-panel {
+            position: fixed;
+            left: 50%;
+            bottom: 20px;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+        
+        /* 统一按钮组样式 */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        /* 统一按钮样式 */
+        .button {
+            min-width: 110px;
+            height: 42px;
+            padding: 0 20px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
+        
+        .button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 手动点名区域样式 */
+        .manual-select {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding-left: 25px;
+            border-left: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .manual-input {
+            width: 160px;
+            height: 42px;
+            padding: 0 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+        
+        .manual-input::placeholder {
+            color: #999;
+            white-space: nowrap;
+            overflow: visible;
+        }
+        
+        .manual-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 3px rgba(76,175,80,0.1);
+            width: 200px;
+        }
+        
+        /* 统计区域样式 */
+        .statistics-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 10px auto;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-width: 140px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .stat-title {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin: 5px 0;
+        }
+        
+        .stat-value.correct {
+            color: #4CAF50;
+        }
+        
+        .stat-value.wrong {
+            color: #f44336;
+        }
+        
+        .stat-value.neutral {
+            color: #607d8b;
+        }
+        
+        .stat-value.pending {
+            color: #9e9e9e;
+        }
+        
+        .stat-subtitle {
+            color: #999;
+            font-size: 12px;
+        }
+        
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .control-panel {
+                flex-direction: column;
+                padding: 15px;
+                width: 90%;
+                max-width: 400px;
+            }
+            
+            .button-group {
+                flex-wrap: wrap;
+                justify-content: center;
+                width: 100%;
+            }
+            
+            .manual-select {
+                border-left: none;
+                border-top: 1px solid rgba(0,0,0,0.1);
+                padding: 15px 0 0;
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .button {
+                flex: 1;
+                min-width: calc(50% - 6px);
+            }
+            
+            .manual-input {
+                flex: 1;
+                max-width: 200px;
+            }
+            
+            .statistics-container {
+                gap: 10px;
+            }
+            
+            .stat-card {
+                min-width: calc(33.33% - 10px);
+            }
+            
+            #result {
+                font-size: 24px;
+                padding: 20px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .stat-card {
+                min-width: calc(50% - 10px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>随机点名系统</h1>
+        
+        <div class="main-content">
+            <div id="result">等待点名...</div>
+            
+            <div class="statistics-container">
+                <div class="stat-card">
+                    <div class="stat-title">总人数</div>
+                    <div class="stat-value" id="totalCount">0</div>
+                    <div class="stat-subtitle">班级总人数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">回答正确</div>
+                    <div class="stat-value correct" id="correctCount">0</div>
+                    <div class="stat-subtitle">占比 <span id="correctPercent">0%</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">回答错误</div>
+                    <div class="stat-value wrong" id="wrongCount">0</div>
+                    <div class="stat-subtitle">占比 <span id="wrongPercent">0%</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">已点名未回答</div>
+                    <div class="stat-value neutral" id="noAnswerCount">0</div>
+                    <div class="stat-subtitle">占比 <span id="noAnswerPercent">0%</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">未点名</div>
+                    <div class="stat-value pending" id="notSelectedCount">0</div>
+                    <div class="stat-subtitle">占比 <span id="notSelectedPercent">0%</span></div>
+                </div>
+            </div>
+            
+            <h2>已点名学生</h2>
+            <div class="list-container">
+                <div class="list-header">
+                    <span class="header-number">序号</span>
+                    <span class="header-name">姓名</span>
+                    <div class="header-status">
+                        <span class="status-label correct" title="回答正确">
+                            <i>✓</i>回答正确
+                        </span>
+                        <span class="status-label wrong" title="回答错误">
+                            <i>✗</i>回答错误
+                        </span>
+                    </div>
+                    <span class="header-note">备注</span>
+                </div>
+                <div id="selectedList"></div>
+            </div>
+        </div>
+        
+        <div class="control-panel">
+            <div class="button-group">
+                <label for="fileInput" class="button">导入名单</label>
+                <input type="file" id="fileInput" accept=".txt" style="display: none;" onchange="importStudents()">
+                <button class="button" onclick="randomSelect()">随机点名</button>
+                <button class="button" onclick="reset()">重置</button>
+                <button class="button" onclick="exportToExcel()">导出记录</button>
+            </div>
+            <div class="manual-select">
+                <input type="text" id="manualInput" class="manual-input" placeholder="输入学生姓名" list="studentList">
+                <datalist id="studentList"></datalist>
+                <button class="button" onclick="manualSelect()">手动点名</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 存储所有学生名单
+        let students = [];
+        // 存储已被点到的学生
+        let selectedStudents = [];
+        // 存储学生备注
+        let studentNotes = {};
+        // 存储学生勾选状态
+        let studentChecks = {};
+        // 添加新的状态存储
+        let studentCorrect = {};
+        let studentWrong = {};
+
+        // 添加一个辅助函数用于获取随机学生
+        function getRandomStudent(excludeStudent = null) {
+            const availableStudents = students.filter(
+                student => !selectedStudents.includes(student) && student !== excludeStudent
+            );
+            if (availableStudents.length === 0) return null;
+            const randomIndex = Math.floor(Math.random() * availableStudents.length);
+            return availableStudents[randomIndex];
+        }
+
+        // 导入学生名单
+        function importStudents() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // 按行分割文本，过滤空行
+                    students = e.target.result.split('\n')
+                        .map(name => name.trim())
+                        .filter(name => name);
+                    
+                    // 更新界面和数据
+                    updateStatistics();
+                    updateStudentSuggestions();
+                    
+                    // 显示导入成功提示
+                    const result = document.getElementById('result');
+                    result.textContent = `成功导入 ${students.length} 名学生`;
+                    result.style.color = '#4CAF50';
+                    
+                    // 2秒后清空显示
+                    setTimeout(() => {
+                        result.textContent = ' ';
+                        result.style.color = '#2c3e50';
+                    }, 2000);
+                };
+                reader.readAsText(file);
+            }
+            
+            // 清空文件输入框，���许重复选择同一文件
+            fileInput.value = '';
+        }
+
+        // 随机选择学生
+        function randomSelect() {
+            const resultDiv = document.getElementById('result');
+            
+            if (students.length === 0) {
+                resultDiv.textContent = '请先导入学生名单';
+                resultDiv.style.color = '#f44336';
+                return;
+            }
+            
+            // 过滤掉已被选中的学生
+            const availableStudents = students.filter(
+                student => !selectedStudents.includes(student)
+            );
+            
+            if (availableStudents.length === 0) {
+                resultDiv.textContent = '所有学生都已被点到，请重置';
+                resultDiv.style.color = '#f44336';
+                setTimeout(() => {
+                    resultDiv.style.color = '#2c3e50';
+                }, 3000);
+                return;
+            }
+            
+            // 随机选择最终的学生
+            const finalStudent = getRandomStudent();
+            
+            // 禁用随机点名按钮，防止动画过程中重复点击
+            const randomButton = document.querySelector('button[onclick="randomSelect()"]');
+            randomButton.disabled = true;
+            
+            // 预生成一些随机���生名字
+            const randomPool = new Set();
+            // 确保第一个显示的名字不是"等待点名"
+            randomPool.add(getRandomStudent(finalStudent));
+            
+            for (let i = 0; i < 19; i++) {
+                const student = getRandomStudent(finalStudent);
+                if (student) randomPool.add(student);
+            }
+            const randomStudents = Array.from(randomPool);
+            
+            // 开始动画前立即显示第一个随机名字
+            let currentStudent = randomStudents[0];
+            resultDiv.textContent = currentStudent;
+            
+            // 开始动画
+            let duration = 3000;
+            let startTime = null;
+            let lastUpdateTime = 0;
+
+            function easeOutCubic(x) {
+                return 1 - Math.pow(1 - x, 3);
+            }
+            
+            function easeOutQuart(x) {
+                return 1 - Math.pow(1 - x, 4);
+            }
+            
+            function getUpdateInterval(progress) {
+                // 调整更新间隔范围
+                const minInterval = 40;  // 稍微减小最小间隔
+                const maxInterval = 600; // 减小最大间隔
+                
+                // 使用更平滑的缓动函数
+                const easeProgress = easeOutQuart(progress);
+                
+                // 使用非线性插值计算间隔
+                const interval = minInterval + (maxInterval - minInterval) * easeProgress;
+                
+                // 在最后阶段使用更平滑的过渡
+                if (progress > 0.8) {
+                    return interval * (1 + (progress - 0.8) * 2);
+                }
+                
+                return interval;
+            }
+            
+            function getNextStudent() {
+                // 从预生成的池中随机选择，提高性能
+                return randomStudents[Math.floor(Math.random() * randomStudents.length)];
+            }
+            
+            function animate(currentTime) {
+                if (!startTime) {
+                    startTime = currentTime;
+                    lastUpdateTime = currentTime;
+                }
+                
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                const updateInterval = getUpdateInterval(progress);
+                
+                if (currentTime - lastUpdateTime >= updateInterval) {
+                    const tempStudent = getNextStudent();
+                    if (tempStudent && tempStudent !== currentStudent) {
+                        currentStudent = tempStudent;
+                        resultDiv.textContent = currentStudent;
+                        lastUpdateTime = currentTime;
+                    }
+                }
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // 确保最终显示正确的学生，并防止闪烁
+                    resultDiv.textContent = finalStudent;
+                    resultDiv.style.color = '#2c3e50';
+                    selectedStudents.push(finalStudent);
+                    updateSelectedList();
+                    updateStatistics();
+                    randomButton.disabled = false;
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+
+        // 更新已选学生列表显示
+        function updateSelectedList() {
+            const selectedList = document.getElementById('selectedList');
+            if (selectedStudents.length === 0) {
+                selectedList.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">暂无点名记录</div>';
+                return;
+            }
+            
+            // 创建一个倒序的数组
+            const reversedStudents = [...selectedStudents].reverse();
+            
+            selectedList.innerHTML = reversedStudents.map((student, index) => {
+                // 计算原始索引（��于保持正确的编号和数据关联）
+                const originalIndex = selectedStudents.length - 1 - index;
+                return `
+                    <div class="student-item" style="animation: fadeIn 0.5s ease-out ${index * 0.1}s">
+                        <span class="student-number">${originalIndex + 1}</span>
+                        <span class="student-name">${student}</span>
+                        <div class="status-group">
+                            <label class="checkbox-wrapper checkbox-wrapper-correct">
+                                <input type="checkbox" class="student-checkbox" id="correct_${originalIndex}" 
+                                    title="回答正确"
+                                    onchange="saveCorrect(${originalIndex})" ${studentCorrect[student] ? 'checked' : ''}>
+                                <span class="checkbox-custom correct"></span>
+                                <span class="checkbox-label">正确</span>
+                            </label>
+                            <label class="checkbox-wrapper checkbox-wrapper-wrong">
+                                <input type="checkbox" class="student-checkbox" id="wrong_${originalIndex}" 
+                                    title="回答错误"
+                                    onchange="saveWrong(${originalIndex})" ${studentWrong[student] ? 'checked' : ''}>
+                                <span class="checkbox-custom wrong"></span>
+                                <span class="checkbox-label">错误</span>
+                            </label>
+                        </div>
+                        <input type="text" class="student-note" id="note_${originalIndex}" 
+                            placeholder="点击添加备注..." onchange="saveNote(${originalIndex})"
+                            value="${studentNotes[student] || ''}">
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 保存备注
+        function saveNote(index) {
+            const noteInput = document.getElementById(`note_${index}`);
+            const student = selectedStudents[index];
+            studentNotes[student] = noteInput.value;
+        }
+
+        // 保存正确状态
+        function saveCorrect(index) {
+            const checkBox = document.getElementById(`correct_${index}`);
+            const student = selectedStudents[index];
+            studentCorrect[student] = checkBox.checked;
+            if (checkBox.checked) {
+                // 如果勾选正确，取消错误勾选
+                document.getElementById(`wrong_${index}`).checked = false;
+                studentWrong[student] = false;
+            }
+            updateStatistics();
+        }
+
+        // 保存错误状态
+        function saveWrong(index) {
+            const checkBox = document.getElementById(`wrong_${index}`);
+            const student = selectedStudents[index];
+            studentWrong[student] = checkBox.checked;
+            if (checkBox.checked) {
+                // 如果勾选错误，取消正确勾选
+                document.getElementById(`correct_${index}`).checked = false;
+                studentCorrect[student] = false;
+            }
+            updateStatistics();
+        }
+
+        // 导出Excel功能
+        function exportToExcel() {
+            if (selectedStudents.length === 0) {
+                alert('还没有点名记录！');
+                return;
+            }
+
+            // 创建CSV内容
+            let csvContent = '序号,姓名,回答状况,备注\n';
+            selectedStudents.forEach((student, index) => {
+                let status = '未回答';
+                if (studentCorrect[student]) status = '回答正确';
+                if (studentWrong[student]) status = '回答错误';
+                const note = studentNotes[student] || '';
+                csvContent += `${index + 1},${student},${status},${note}\n`;
+            });
+
+            // 处理中文编码
+            const blob = new Blob(['\ufeff' + csvContent], { 
+                type: 'text/csv;charset=utf-8;' 
+            });
+            
+            // 创建下载链接
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const date = new Date().toLocaleDateString().replace(/\//g, '-');
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `点名记录-${date}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 重置系统
+        function reset() {
+            const resultDiv = document.getElementById('result');
+            selectedStudents = [];
+            studentNotes = {};
+            studentCorrect = {};
+            studentWrong = {};
+            
+            // 如果已导入学生名单，显示空格，否则显示"请先导入学生名单"
+            if (students.length > 0) {
+                resultDiv.textContent = ' ';
+            } else {
+                resultDiv.textContent = '请先导入学生名单';
+            }
+            resultDiv.style.color = '#2c3e50';
+            
+            document.getElementById('manualInput').value = '';
+            updateSelectedList();
+            updateStatistics();
+            updateStudentSuggestions();
+        }
+
+        // 更新统计信息
+        function updateStatistics() {
+            // 计算已点名学生的状态
+            const total = selectedStudents.length;
+            const correct = selectedStudents.filter(student => studentCorrect[student]).length;
+            const wrong = selectedStudents.filter(student => studentWrong[student]).length;
+            const noAnswerSelected = total - correct - wrong;  // 已点名但未回答的人数
+            
+            // 计算总学生数和未被点到的学生数
+            const totalStudents = students.length;  // 总学生数
+            const notSelected = totalStudents - total;  // 未被点到的学生数
+            
+            // 更新数量显示
+            document.getElementById('totalCount').textContent = totalStudents;
+            document.getElementById('correctCount').textContent = correct;
+            document.getElementById('wrongCount').textContent = wrong;
+            document.getElementById('noAnswerCount').textContent = noAnswerSelected;
+            document.getElementById('notSelectedCount').textContent = notSelected;
+            
+            // 更新百分比
+            document.getElementById('correctPercent').textContent = 
+                totalStudents ? Math.round(correct / totalStudents * 100) + '%' : '0%';
+            document.getElementById('wrongPercent').textContent = 
+                totalStudents ? Math.round(wrong / totalStudents * 100) + '%' : '0%';
+            document.getElementById('noAnswerPercent').textContent = 
+                totalStudents ? Math.round(noAnswerSelected / totalStudents * 100) + '%' : '0%';
+            document.getElementById('notSelectedPercent').textContent = 
+                totalStudents ? Math.round(notSelected / totalStudents * 100) + '%' : '0%';
+        }
+
+        // 更新学生列表建议
+        function updateStudentSuggestions() {
+            const datalist = document.getElementById('studentList');
+            datalist.innerHTML = students
+                .filter(student => !selectedStudents.includes(student))
+                .map(student => `<option value="${student}">`)
+                .join('');
+        }
+
+        // 手动点名函数
+        function manualSelect() {
+            const input = document.getElementById('manualInput');
+            const studentName = input.value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            if (!studentName) {
+                resultDiv.textContent = '请输入学生姓名';
+                resultDiv.style.color = '#f44336';
+                return;
+            }
+            
+            // 检查是否在学生名单中
+            if (!students.includes(studentName)) {
+                resultDiv.textContent = '该学生不在名单中';
+                resultDiv.style.color = '#f44336';
+                return;
+            }
+            
+            // 检查是否已被点到
+            if (selectedStudents.includes(studentName)) {
+                resultDiv.textContent = '该学生已被点到';
+                resultDiv.style.color = '#f44336';
+                return;
+            }
+            
+            // 更新显示
+            resultDiv.textContent = studentName;
+            resultDiv.style.color = '#2c3e50';
+            selectedStudents.push(studentName);
+            updateSelectedList();
+            updateStatistics();
+            
+            // 清空输入框并更新建议列表
+            input.value = '';
+            updateStudentSuggestions();
+        }
+    </script>
+</body>
+</html> 
